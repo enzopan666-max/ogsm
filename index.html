@@ -532,12 +532,12 @@ function renderTaskPanel(tasks, panelId, statusClass) {
   if (panel.innerHTML) return;
   var statusCls = {'已完成':'done','进行中':'prog','未开始':'wait'};
   function getQ(dl) { var m = parseInt(dl.split('-')[1]); return m<=3?'Q1':m<=6?'Q2':m<=9?'Q3':'Q4'; }
-  var h = '<table class="task-table"><thead><tr><th>#</th><th>任务</th><th>季度</th><th>优先级</th><th>状态</th><th>截止日期</th><th>负责人</th></tr></thead><tbody>';
+  var h = '<table class="task-table"><thead><tr><th>#</th><th>任务</th><th>季度</th><th>优先级</th><th>状态</th><th>截止日期</th><th>负责人</th><th>交付材料</th><th>交付凭证</th></tr></thead><tbody>';
   for (var i = 0; i < tasks.length; i++) {
     var t = tasks[i];
     var cls = statusCls[t[2]] || 'wait';
     var q = getQ(t[1]);
-    h += '<tr><td style="color:var(--t3);width:28px">' + (i+1) + '</td><td>' + t[0] + '</td><td><span class="q-badge ' + q + '">' + q + '</span></td><td><span class="pri p' + t[3].substring(1) + '">' + t[3] + '</span></td><td><span class="task-status ' + cls + '">' + t[2] + '</span></td><td style="white-space:nowrap">' + t[1] + '</td><td style="color:var(--t2)">' + t[4] + '</td></tr>';
+    h += '<tr><td style="color:var(--t3);width:28px">' + (i+1) + '</td><td>' + t[0] + '</td><td><span class="q-badge ' + q + '">' + q + '</span></td><td><span class="pri p' + t[3].substring(1) + '">' + t[3] + '</span></td><td><span class="task-status ' + cls + '">' + t[2] + '</span></td><td style="white-space:nowrap">' + t[1] + '</td><td style="color:var(--t2)">' + t[4] + '</td><td style="color:var(--t3)">-</td><td style="color:var(--t3)">-</td></tr>';
   }
   h += '</tbody></table>';
   panel.innerHTML = h;
