@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户运营部 OGSM 进度管理看板</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1119; --bg2: #1a1d2e; --bg3: #242840;
+  --card: #1a1d2e; --card2: #1e2137; --border: #2a2d3e;
+  --t: #e2e8f0; --t2: #94a3b8; --t3: #64748b;
+  --p: #6366f1; --p2: #818cf8; --r: #ef4444; --r2: #f87171;
+  --g: #22c55e; --g2: #4ade80; --y: #f59e0b; --b: #3b82f6; --c: #06b6d4;
+  --grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+}
+[data-theme="light"] {
+  --bg: #f8fafc; --bg2: #f1f5f9; --bg3: #e2e8f0;
+  --card: #ffffff; --card2: #f8fafc; --border: #e2e8f0;
+  --t: #0f172a; --t2: #475569; --t3: #94a3b8;
+  --p: #6366f1; --r: #ef4444; --g: #16a34a; --y: #d97706; --b: #2563eb;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter','Noto Sans SC',sans-serif; background:var(--bg); color:var(--t); min-height:100vh; }
+.h { background:var(--grad); padding:24px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+.h h1 { font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.5px; }
+.h .meta { font-size:13px; color:rgba(255,255,255,.7); }
+.thm { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); color:#fff; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:500; transition:.2s; }
+.thm:hover { background:rgba(255,255,255,.25); }
+.main { max-width:1440px; margin:0 auto; padding:24px; }
+.kpi-row { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:24px; }
+.kpi { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; transition:.2s; }
+.kpi:hover { border-color:var(--p); transform:translateY(-2px); }
+.kpi .label { font-size:12px; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+.kpi .val { font-size:32px; font-weight:700; letter-spacing:-1px; }
+.kpi .sub { font-size:12px; color:var(--t2); margin-top:4px; }
+.kpi.c1 .val { color:var(--p); } .kpi.c2 .val { color:var(--g); } .kpi.c3 .val { color:var(--y); } .kpi.c4 .val { color:var(--t2); } .kpi.c5 .val { color:var(--r); }
+.section-title { font-size:16px; font-weight:600; margin-bottom:16px; color:var(--t); }
+.kt-grid { display:flex; flex-direction:column; gap:16px; margin-bottom:28px; }
+.kt-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; transition:.2s; display:flex; flex-wrap:wrap; }
+.kt-card:hover { border-color:var(--p2); }
+.kt-card.risk { border-color:var(--r); box-shadow:0 0 0 1px var(--r); background:rgba(239,68,68,.06); }
+.kt-card .kt-left { width:430px; flex-shrink:0; }
+.kt-header { padding:18px 24px 14px; border-bottom:1px solid var(--border); }
+.kt-body { padding:10px 24px 14px; }
+.kt-right { flex:1; padding:16px 24px; display:flex; flex-direction:column; justify-content:center; border-left:1px solid var(--border); min-width:280px; gap:6px; }
+.kt-tag { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; margin-right:8px; }
+.kt-tag.kt1 { background:rgba(99,102,241,.15); color:var(--p); }
+.kt-tag.kt2 { background:rgba(59,130,246,.15); color:var(--b); }
+.kt-tag.kt3 { background:rgba(6,182,212,.15); color:var(--c); }
+.kt-tag.kt4 { background:rgba(245,158,11,.15); color:var(--y); }
+.kt-tag.kt5 { background:rgba(34,197,94,.15); color:var(--g); }
+.kt-header h3 { font-size:15px; font-weight:600; margin-top:6px; line-height:1.35; }
+.kt-meta { display:flex; gap:12px; margin-top:6px; font-size:11px; color:var(--t2); flex-wrap:wrap; }
+.kt-meta span { display:flex; align-items:center; gap:4px; }
+.risk-badge { background:rgba(239,68,68,.15); color:var(--r); font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; }
+.kt-body { padding:10px 24px 14px; }
+.kt-body .goals { font-size:11px; color:var(--t2); line-height:1.55; padding-left:16px; }
+.kt-body .goals li { padding:1px 0; }
+.kt-body .goals li::marker { color:var(--p); }
+/* KT Quarterly Bars */
+.kt-qbars { display:flex; gap:4px; margin-bottom:8px; }
+.kt-qbar { flex:1; }
+.kt-qbar .kt-qfill { height:10px; background:var(--bg3); border-radius:4px; overflow:hidden; }
+.kt-qbar .kt-qfill-inner { height:100%; border-radius:4px; transition:width .5s; }
+.kt-qbar .kt-qtag { font-size:9px; color:var(--t3); text-align:center; margin-top:2px; white-space:nowrap; }
+.kt-stats { display:flex; gap:10px; font-size:11px; color:var(--t2); flex-wrap:wrap; align-items:center; }
+.kt-stats span { padding:2px 8px; border-radius:4px; }
+.kt-stats .s-done { background:rgba(34,197,94,.1); color:var(--g); }
+.kt-stats .s-prog { background:rgba(245,158,11,.1); color:var(--y); }
+.kt-stats .s-wait { background:rgba(100,116,139,.1); color:var(--t3); }
+/* Toggle button */
+.toggle-btn { margin-left:auto; background:rgba(99,102,241,.1); color:var(--p); border:1px solid rgba(99,102,241,.2); padding:3px 12px; border-radius:6px; font-size:11px; font-weight:500; cursor:pointer; transition:.2s; white-space:nowrap; }
+.toggle-btn:hover { background:rgba(99,102,241,.2); }
+.toggle-btn.active { background:var(--p); color:#fff; }
+/* Task Detail Panel */
+.task-panel { display:none; width:100%; border-top:1px solid var(--border); max-height:420px; overflow-y:auto; }
+.task-panel.open { display:block; }
+.task-table { width:100%; border-collapse:collapse; font-size:11px; }
+.task-table th { text-align:left; padding:8px 14px; background:var(--bg2); color:var(--t3); font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:.5px; position:sticky; top:0; z-index:1; }
+.task-table td { padding:7px 14px; border-bottom:1px solid var(--border); color:var(--t); }
+.task-table tbody tr { transition:.12s; }
+.task-table tbody tr:hover { background:var(--bg2); }
+.task-status { display:inline-block; font-size:10px; font-weight:600; padding:1px 7px; border-radius:3px; white-space:nowrap; }
+.task-status.done { background:rgba(34,197,94,.12); color:#22c55e; }
+.task-status.prog { background:rgba(245,158,11,.12); color:#f59e0b; }
+.task-status.wait { background:rgba(100,116,139,.12); color:#94a3b8; }
+.q-badge { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:3px; white-space:nowrap; }
+.q-badge.Q1 { background:rgba(99,102,241,.12); color:#818cf8; }
+.q-badge.Q2 { background:rgba(245,158,11,.12); color:#f59e0b; }
+.q-badge.Q3 { background:rgba(6,182,212,.12); color:#22d3ee; }
+.q-badge.Q4 { background:rgba(34,197,94,.12); color:#4ade80; }
+/* Overdue Module */
+.overdue-module { margin-bottom:28px; border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.overdue-module .section-inner { padding:20px 24px; }
+.overdue-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+.os-card { padding:20px 16px; text-align:center; transition:.2s; cursor:pointer; position:relative; }
+.os-card:hover { background:var(--bg2); }
+.os-card + .os-card { border-left:1px solid var(--border); }
+.os-card .os-icon { font-size:20px; margin-bottom:6px; }
+.os-card .os-num { font-size:36px; font-weight:800; letter-spacing:-2px; line-height:1; }
+.os-card .os-label { font-size:11px; color:var(--t3); margin-top:4px; }
+.os-card .os-label span { font-size:10px; opacity:.7; }
+.os-critical { background:rgba(239,68,68,.04); } .os-critical .os-num { color:#ef4444; }
+.os-severe { background:rgba(249,115,22,.03); } .os-severe .os-num { color:#f97316; }
+.os-warning { background:rgba(245,158,11,.03); } .os-warning .os-num { color:#f59e0b; }
+.os-mild { background:rgba(59,130,246,.03); } .os-mild .os-num { color:#3b82f6; }
+.overdue-table-wrap { overflow-x:auto; padding:0; }
+.overdue-table { width:100%; border-collapse:collapse; font-size:12px; }
+.overdue-table th { text-align:left; padding:10px 14px; color:var(--t3); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); white-space:nowrap; background:var(--bg2); }
+.overdue-table td { padding:10px 14px; border-bottom:1px solid var(--border); color:var(--t); }
+.overdue-table tbody tr { transition:.15s; }
+.overdue-table tbody tr:hover { background:var(--bg2); }
+.od-critical { border-left:4px solid #ef4444; background:rgba(239,68,68,.04); }
+.od-warning { border-left:4px solid #f59e0b; background:rgba(245,158,11,.02); }
+.od-mild { border-left:4px solid #3b82f6; }
+.kt-badge { display:inline-block; font-size:10px; font-weight:700; padding:1px 7px; border-radius:3px; white-space:nowrap; }
+.kt-badge-1 { background:rgba(99,102,241,.15); color:#818cf8; }
+.kt-badge-2 { background:rgba(59,130,246,.15); color:#60a5fa; }
+.kt-badge-3 { background:rgba(6,182,212,.15); color:#22d3ee; }
+.kt-badge-4 { background:rgba(245,158,11,.15); color:#fbbf24; }
+.kt-badge-5 { background:rgba(34,197,94,.15); color:#4ade80; }
+.od-days { font-weight:700; font-size:13px; }
+.od-days.critical { color:#ef4444; } .od-days.severe { color:#f97316; } .od-days.warning { color:#f59e0b; } .od-days.mild { color:#3b82f6; }
+.pri { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:3px; }
+.pri.p0 { background:rgba(239,68,68,.12); color:#ef4444; }
+.pri.p1 { background:rgba(245,158,11,.12); color:#f59e0b; }
+.pri.p2 { background:rgba(100,116,139,.12); color:#94a3b8; }
+.st { display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:4px; white-space:nowrap; }
+.st.done { background:rgba(34,197,94,.12); color:#22c55e; }
+.st.prog { background:rgba(245,158,11,.12); color:#f59e0b; }
+.st.wait { background:rgba(100,116,139,.12); color:#94a3b8; }
+/* Overdue person cards */
+.od-person-grid { display:flex; flex-direction:column; gap:5px; flex:1; overflow-y:auto; }
+.od-person { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg2); border-radius:10px; border-left:3px solid transparent; transition:.2s; flex:1; cursor:pointer; position:relative; }
+.od-person:hover { background:var(--bg3); border-left-color:var(--p); }
+.odp-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; flex-shrink:0; }
+.odp-info { min-width:0; flex:1; display:flex; flex-direction:column; justify-content:center; }
+.odp-detail { display:none; position:absolute; top:100%; left:0; right:0; z-index:10; margin-top:2px; padding:10px 14px; background:rgba(26,29,46,.95); border:1px solid var(--border); border-radius:10px; font-size:11px; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.od-person:hover .odp-detail { display:block; }
+.odp-name { font-size:13px; font-weight:600; }
+.odp-name .odp-badge { display:inline-block; margin-left:6px; font-size:10px; font-weight:700; padding:1px 7px; border-radius:3px; background:rgba(239,68,68,.12); color:#ef4444; }
+.odp-tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
+.odp-tags span { font-size:9px; padding:2px 7px; border-radius:4px; background:rgba(100,116,139,.08); color:var(--t2); border:1px solid var(--border); white-space:nowrap; }
+.odp-detail .odp-task { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); }
+.odp-detail .odp-task:last-child { border-bottom:none; }
+.odp-detail .odp-task-name { flex:1; font-size:11px; color:var(--t); }
+.odp-detail .odp-task-name .odp-kt { font-size:9px; margin-right:4px; }
+.odp-detail .odp-link { font-size:9px; color:var(--t3); white-space:nowrap; }
+/* KT overdue blocks */
+.od-kt-grid { display:flex; gap:20px; flex:1; align-items:stretch; padding-bottom:36px; }
+.od-kt-col { flex:1; display:flex; flex-direction:column; align-items:stretch; min-width:0; position:relative; }
+.od-kt-blocks { display:flex; flex-direction:column; gap:3px; flex:1; justify-content:flex-end; }
+.od-kt-block { display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; padding:7px 4px; border-radius:0; text-align:center; line-height:1.2; cursor:default; transition:.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:36px; }
+.od-kt-block:hover { transform:scale(1.03); box-shadow:0 2px 8px rgba(0,0,0,.25); z-index:1; }
+.od-kt-title { position:absolute; bottom:-34px; left:0; right:0; text-align:center; font-size:10px; font-weight:600; color:var(--t2); line-height:1.3; white-space:normal; }
+.od-kt-count { display:inline-block; margin:0 auto 8px; font-size:10px; font-weight:700; padding:1px 8px; border-radius:3px; background:rgba(239,68,68,.12); color:#ef4444; flex-shrink:0; }
+.od-kt-sep { width:100%; height:1px; background:var(--border); margin-bottom:6px; flex-shrink:0; }
+.od-kt-count span { font-size:9px; font-weight:400; color:var(--t3); }
+/* charts */
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:28px; }
+.chart-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 18px 18px; transition:.2s; display:flex; flex-direction:column; }
+.chart-card:hover { border-color:var(--p2); }
+.chart-card h4 { font-size:13px; font-weight:600; color:var(--t); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.chart-card canvas { max-height:260px; }
+.chart-card .card-body { flex:1; display:flex; align-items:stretch; min-height:0; }
+/* Overdue charts spacing */
+.overdue-charts { margin-top:14px; }
+/* Members */
+.members-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; }
+.member-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 22px; display:flex; align-items:center; gap:20px; transition:.2s; }
+.member-card:hover { border-color:var(--p); }
+.member-left { display:flex; align-items:center; gap:14px; min-width:0; }
+.member-card .avatar { width:44px; height:44px; border-radius:50%; background:var(--grad); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; font-weight:600; font-size:16px; }
+.member-info { min-width:0; }
+.member-info .mname { font-size:14px; font-weight:600; }
+.member-info .mdept { font-size:11px; color:var(--t3); margin-top:2px; }
+.member-right { flex:1; min-width:0; }
+.member-right .mstat { display:flex; align-items:baseline; gap:6px; margin-bottom:6px; }
+.member-right .mtask { font-size:22px; font-weight:700; color:var(--p); line-height:1; }
+.member-right .mtlabel { font-size:10px; color:var(--t3); }
+.mp-bars { display:flex; gap:4px; }
+.mp-qbar { flex:1; min-width:0; }
+.mp-qbar .mp-qfill { height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; }
+.mp-qbar .mp-qfill-inner { height:100%; border-radius:4px; transition:width .5s; }
+.mp-qbar .mp-qtag { font-size:9px; color:var(--t3); text-align:center; margin-top:2px; }
+/* Alert */
+.alert-card { background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); border-radius:14px; padding:18px 20px; margin-bottom:28px; }
+.alert-card h4 { font-size:13px; font-weight:600; color:var(--r); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.alert-card p { font-size:13px; color:var(--t2); line-height:1.6; }
+.footer { text-align:center; padding:20px; font-size:11px; color:var(--t3); border-top:1px solid var(--border); margin-top:24px; }
+@media(max-width:768px) {
+  .kpi-row { grid-template-columns:repeat(3,1fr); }
+  .kt-grid { grid-template-columns:1fr; }
+  .kt-card { flex-direction:column; }
+  .kt-card .kt-left { width:100%; }
+  .kt-right { border-left:none; border-top:1px solid var(--border); min-width:0; }
+  .charts-row { grid-template-columns:1fr; }
+  .members-grid { grid-template-columns:1fr; }
+  .overdue-summary { grid-template-columns:repeat(2,1fr); }
+  .os-card + .os-card { border-left:none; }
+  .os-card:nth-child(2n) { border-left:1px solid var(--border); }
+  .os-card:nth-child(n+3) { border-top:1px solid var(--border); }
+}
+</style>
+</head>
+<body>
+<div class="h">
+  <div>
+    <h1>用户运营部 OGSM 进度管理看板</h1>
+    <div class="meta">2026年度 · 五大KT · <a href="https://transsioner.feishu.cn/base/LBM5b1sAsaLk92sFYXscSadEnJS" target="_blank" style="color:rgba(255,255,255,.85);text-decoration:underline;font-weight:500;">📋 打开飞书源数据</a> · 数据更新时间 <span id="ts"></span></div>
+  </div>
+  <button class="thm" onclick="toggleTheme()" id="themeBtn">☀ 浅色模式</button>
+</div>
+
+<div class="main">
+  <div class="kpi-row">
+    <div class="kpi c1"><div class="label">关键任务总数</div><div class="val">112</div><div class="sub">覆盖5大KT</div></div>
+    <div class="kpi c2"><div class="label">已完成</div><div class="val">15</div><div class="sub">完成率 13.4%</div></div>
+    <div class="kpi c3"><div class="label">进行中</div><div class="val">38</div><div class="sub">占比 33.9%</div></div>
+    <div class="kpi c4"><div class="label">未开始</div><div class="val">59</div><div class="sub">占比 52.7%</div></div>
+    <div class="kpi c5"><div class="label">⚠ 高风险项目</div><div class="val">1</div><div class="sub">KT-1 进度严重滞后</div></div>
+  </div>
+
+  <div class="section-title" style="margin-top:4px;">⏰ 超期任务提醒 <span style="font-size:12px;font-weight:400;color:var(--r);">14 项超期</span></div>
+  <div class="overdue-module">
+    <div class="overdue-summary">
+      <div class="os-card os-critical"><div class="os-icon">🔴</div><div class="os-num">1</div><div class="os-label">严重超期<br><span>≥90天</span></div></div>
+      <div class="os-card os-severe"><div class="os-icon">🟠</div><div class="os-num">0</div><div class="os-label">重度超期<br><span>60-89天</span></div></div>
+      <div class="os-card os-warning"><div class="os-icon">🟡</div><div class="os-num">12</div><div class="os-label">中度超期<br><span>30-59天</span></div></div>
+      <div class="os-card os-mild"><div class="os-icon">🔵</div><div class="os-num">1</div><div class="os-label">轻度超期<br><span>&lt;30天</span></div></div>
+    </div>
+    <div class="overdue-table-wrap">
+      <table class="overdue-table"><thead><tr><th>所属KT</th><th>季度</th><th>超期天数</th><th>优先级</th><th>任务</th><th>执行人</th><th>截止日期</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr class="od-critical"><td><span class="kt-badge kt-badge-1">KT-1</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days critical">90天</span></td><td><span class="pri p0">P0</span></td><td>上线帮助率调研按钮和满意度调研标签</td><td>高强</td><td>2026-02-28</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-4">KT-4</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p0">P0</span></td><td>多渠道分层满意度调研方式方案落地</td><td>雷淦/高强</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-4">KT-4</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p0">P0</span></td><td>优化大客户调研WA渠道有效样本比例不低于6%</td><td>雷淦</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-4">KT-4</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p0">P0</span></td><td>对各区域呼叫中心人员和业务盘点输出报告</td><td>程艾静</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-4">KT-4</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p0">P0</span></td><td>AIGC工具提效搭建公共工具库采购26年账号</td><td>洪瑜</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-4">KT-4</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p0">P0</span></td><td>VOC声纳体系制定投诉及危机舆情录入标准</td><td>雷淦</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-3">KT-3</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>IP品牌价值点融入故事线输出角色介绍书</td><td>洪瑜</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-3">KT-3</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>规划年度礼赠计划丰富IP礼品线增加10种品类</td><td>洪瑜</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-5">KT-5</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>完成五个岗位2026年首次认证盘点</td><td>程艾静/洪瑜/雷淦/蒋爽</td><td>2026-03-31</td><td><span class="st wait">未开始</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-5">KT-5</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>四大岗位线更新2026年新人学习地图课程</td><td>程艾静/雷淦</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-5">KT-5</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>社媒DM新建岗位新人学习地图</td><td>洪瑜/蒋爽</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-5">KT-5</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>梳理岗位工作内容制定日/周/月工作指引和KPI</td><td>洪瑜/蒋爽</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-warning"><td><span class="kt-badge kt-badge-5">KT-5</span></td><td><span class="q-badge Q1">Q1</span></td><td><span class="od-days warning">59天</span></td><td><span class="pri p1">P1</span></td><td>五大岗位完善月度培训落地和验收机制每月输出月考</td><td>程艾静/洪瑜/雷淦/蒋爽</td><td>2026-03-31</td><td><span class="st prog">进行中</span></td></tr>
+        <tr class="od-mild"><td><span class="kt-badge kt-badge-4">KT-4</span></td><td><span class="q-badge Q2">Q2</span></td><td><span class="od-days mild">28天</span></td><td><span class="pri p0">P0</span></td><td>新增调研市场推进上线</td><td>雷淦</td><td>2026-05-01</td><td><span class="st prog">进行中</span></td></tr>
+      </tbody></table>
+    </div>
+    <div class="charts-row overdue-charts">
+      <div class="chart-card"><h4>📊 超期任务 KT 维度分布</h4>
+        <div class="card-body">
+         <div class="od-kt-grid">
+          <div class="od-kt-col">
+            <div class="od-kt-count">1项</div>
+            <div class="od-kt-sep"></div>
+            <div class="od-kt-blocks"><div class="od-kt-block" style="background:#818cf8;color:#fff">帮助率调研</div></div>
+            <div class="od-kt-title">KT-1 联络中心AI无人化转型</div>
+          </div>
+          <div class="od-kt-col">
+            <div class="od-kt-count">0项</div>
+            <div class="od-kt-sep"></div>
+            <div class="od-kt-blocks"></div>
+            <div class="od-kt-title">KT-2 APP与Web AI工具化迭代</div>
+          </div>
+          <div class="od-kt-col">
+            <div class="od-kt-count">2项</div>
+            <div class="od-kt-sep"></div>
+            <div class="od-kt-blocks"><div class="od-kt-block" style="background:#22d3ee;color:#000">IP品牌</div><div class="od-kt-block" style="background:#22d3ee;color:#000">礼赠计划</div></div>
+            <div class="od-kt-title">KT-3 讲好品牌故事提升服务体验</div>
+          </div>
+          <div class="od-kt-col">
+            <div class="od-kt-count">6项</div>
+            <div class="od-kt-sep"></div>
+            <div class="od-kt-blocks"><div class="od-kt-block" style="background:#fbbf24;color:#000">满意度调研</div><div class="od-kt-block" style="background:#fbbf24;color:#000">大客户调研</div><div class="od-kt-block" style="background:#fbbf24;color:#000">呼叫中心盘点</div><div class="od-kt-block" style="background:#fbbf24;color:#000">AIGC工具</div><div class="od-kt-block" style="background:#fbbf24;color:#000">VOC声纳</div><div class="od-kt-block" style="background:#fbbf24;color:#000">市场推进</div></div>
+            <div class="od-kt-title">KT-4 变革工作流程降本提效创收</div>
+          </div>
+          <div class="od-kt-col">
+            <div class="od-kt-count">5项</div>
+            <div class="od-kt-sep"></div>
+            <div class="od-kt-blocks"><div class="od-kt-block" style="background:#4ade80;color:#000">认证盘点</div><div class="od-kt-block" style="background:#4ade80;color:#000">新人学习</div><div class="od-kt-block" style="background:#4ade80;color:#000">社媒DM</div><div class="od-kt-block" style="background:#4ade80;color:#000">岗位指引</div><div class="od-kt-block" style="background:#4ade80;color:#000">培训验收</div></div>
+            <div class="od-kt-title">KT-5 建设本地组织AI化高人效</div>
+          </div>
+        </div>
+        </div>
+      </div>
+      <div class="chart-card"><h4>👤 超期任务执行人分布</h4>
+        <div class="card-body">
+         <div class="od-person-grid">
+          <div class="od-person"><div class="odp-avatar" style="background:linear-gradient(135deg,#22c55e,#16a34a)">雷</div><div class="odp-info"><div class="odp-name">雷淦<span class="odp-badge">7项</span></div><div class="odp-tags"><span>满意度调研</span><span>大客户调研</span><span>VOC声纳</span><span>市场推进</span><span>认证盘点</span><span>新人学习</span><span>培训验收</span></div></div>
+          <div class="odp-detail"><div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>多渠道分层满意度调研方式方案落地</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>优化大客户调研WA渠道有效样本比例不低于6%</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>VOC声纳体系制定投诉及危机舆情录入标准</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>新增调研市场推进上线</span><span class="odp-link">Q2 · 28天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>四大岗位线更新2026年新人学习地图课程</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>完成五个岗位2026年首次认证盘点</span><span class="odp-link">Q1 · 59天 · 未开始</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>五大岗位完善月度培训落地和验收机制每月输出月考</span><span class="odp-link">Q1 · 59天 · 进行中</span></div></div></div>
+          <div class="od-person"><div class="odp-avatar" style="background:linear-gradient(135deg,#f59e0b,#f97316)">洪</div><div class="odp-info"><div class="odp-name">洪瑜<span class="odp-badge">7项</span></div><div class="odp-tags"><span>AIGC工具</span><span>IP品牌</span><span>礼赠计划</span><span>社媒DM</span><span>岗位指引</span><span>认证盘点</span><span>培训验收</span></div></div>
+          <div class="odp-detail"><div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>AIGC工具提效搭建公共工具库采购26年账号</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-3</span>IP品牌价值点融入故事线输出角色介绍书</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-3</span>规划年度礼赠计划丰富IP礼品线增加10种品类</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>社媒DM新建岗位新人学习地图</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>梳理岗位工作内容制定日/周/月工作指引和KPI</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>完成五个岗位2026年首次认证盘点</span><span class="odp-link">Q1 · 59天 · 未开始</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>五大岗位完善月度培训落地和验收机制每月输出月考</span><span class="odp-link">Q1 · 59天 · 进行中</span></div></div></div>
+          <div class="od-person"><div class="odp-avatar" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">高</div><div class="odp-info"><div class="odp-name">高强<span class="odp-badge">2项</span></div><div class="odp-tags"><span>帮助率调研</span><span>满意度调研</span></div></div>
+          <div class="odp-detail"><div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-1</span>上线帮助率调研按钮和满意度调研标签</span><span class="odp-link">Q1 · 90天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>多渠道分层满意度调研方式方案落地</span><span class="odp-link">Q1 · 59天 · 进行中</span></div></div></div>
+          <div class="od-person"><div class="odp-avatar" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">程</div><div class="odp-info"><div class="odp-name">程艾静<span class="odp-badge">4项</span></div><div class="odp-tags"><span>呼叫中心盘点</span><span>新人学习</span><span>认证盘点</span><span>培训验收</span></div></div>
+          <div class="odp-detail"><div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-4</span>对各区域呼叫中心人员和业务盘点输出报告</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>四大岗位线更新2026年新人学习地图课程</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>完成五个岗位2026年首次认证盘点</span><span class="odp-link">Q1 · 59天 · 未开始</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>五大岗位完善月度培训落地和验收机制每月输出月考</span><span class="odp-link">Q1 · 59天 · 进行中</span></div></div></div>
+          <div class="od-person"><div class="odp-avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">蒋</div><div class="odp-info"><div class="odp-name">蒋爽<span class="odp-badge">4项</span></div><div class="odp-tags"><span>社媒DM</span><span>岗位指引</span><span>认证盘点</span><span>培训验收</span></div></div>
+          <div class="odp-detail"><div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>社媒DM新建岗位新人学习地图</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>梳理岗位工作内容制定日/周/月工作指引和KPI</span><span class="odp-link">Q1 · 59天 · 进行中</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>完成五个岗位2026年首次认证盘点</span><span class="odp-link">Q1 · 59天 · 未开始</span></div>
+          <div class="odp-task"><span class="odp-task-name"><span class="odp-kt">KT-5</span>五大岗位完善月度培训落地和验收机制每月输出月考</span><span class="odp-link">Q1 · 59天 · 进行中</span></div></div></div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-card">
+    <h4>⚠ 风险预警</h4>
+    <p><strong>KT-1 联络中心"AI+无人化"转型</strong> — 当前仅完成 13.6%（3/22），Q2有5项进行中任务截止6月30日。任务完成进度严重滞后于时间节点，可能难以按时达成年度目标。建议立即检视 Q2 关键路径任务（外呼机器人多语种上线、呼入AI自动录单、AICC法语/阿拉伯语交互等），加速推进。</p>
+  </div>
+
+  <div class="section-title">🚩 五大KT进度看板</div>
+  <div class="kt-grid">
+    <!-- KT-1 -->
+    <div class="kt-card risk" id="kt1">
+      <div class="kt-left">
+        <div class="kt-header">
+          <span class="kt-tag kt1">KT-1</span><span class="risk-badge">⚠ 高风险</span>
+          <h3>联络中心"AI+无人化"转型</h3>
+          <div class="kt-meta"><span>👤 潘恩泽</span><span>👥 高强 程艾静</span><span>📅 2026-12-31</span></div>
+        </div>
+        <div class="kt-body">
+          <ul class="goals">
+            <li>AICC机器人满意度88%，解决率95%</li>
+            <li>外呼机器人覆盖全球60%终端调研，有效样本比例15%</li>
+            <li>呼入信息AI录入率90%</li>
+            <li>全年累计释放20个人力（132→112）</li>
+          </ul>
+        </div>
+      </div>
+      <div class="kt-right">
+        <div class="kt-qbars"><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:75%;background:#22c55e"></div></div><div class="kt-qtag" style="color:#22c55e">Q1 3/4</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q2 0/9</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q3 0/6</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q4 0/3</div></div></div>
+        <div class="kt-stats">
+          <span class="s-done">✅ 已完成 3</span><span class="s-prog">🔄 进行中 6</span><span class="s-wait">⏳ 未开始 13</span><span>📋 共 22 项</span>
+          <button class="toggle-btn" data-kt="KT1" onclick="toggleTasks(this)">查看全部任务 ▸</button>
+        </div>
+      </div>
+      <div class="task-panel" id="panel-KT1"></div>
+    </div>
+    <!-- KT-2 -->
+    <div class="kt-card" id="kt2">
+      <div class="kt-left">
+        <div class="kt-header">
+          <span class="kt-tag kt2">KT-2</span>
+          <h3>APP与Web"AI+工具化"迭代</h3>
+          <div class="kt-meta"><span>👤 潘恩泽</span><span>👥 徐超 蒋爽</span><span>📅 2026-12-31</span></div>
+        </div>
+        <div class="kt-body">
+          <ul class="goals">
+            <li>AI功能累计使用人数300万</li>
+            <li>APP及官网产品满意度93%</li>
+            <li>APP月活跃用户数（MAU）9000万</li>
+            <li>APP中高端专区活跃用户数100万</li>
+          </ul>
+        </div>
+      </div>
+      <div class="kt-right">
+        <div class="kt-qbars"><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:100%;background:#22c55e"></div></div><div class="kt-qtag" style="color:#22c55e">Q1 3/3</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q2 0/5</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q3 0/6</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q4 0/4</div></div></div>
+        <div class="kt-stats">
+          <span class="s-done">✅ 已完成 3</span><span class="s-prog">🔄 进行中 5</span><span class="s-wait">⏳ 未开始 10</span><span>📋 共 18 项</span>
+          <button class="toggle-btn" data-kt="KT2" onclick="toggleTasks(this)">查看全部任务 ▸</button>
+        </div>
+      </div>
+      <div class="task-panel" id="panel-KT2"></div>
+    </div>
+    <!-- KT-3 -->
+    <div class="kt-card" id="kt3">
+      <div class="kt-left">
+        <div class="kt-header">
+          <span class="kt-tag kt3">KT-3</span>
+          <h3>讲好品牌故事，提升服务体验</h3>
+          <div class="kt-meta"><span>👤 潘恩泽</span><span>👥 刘彦 洪瑜 雷淦 蒋爽 殷圣禹</span><span>📅 2026-12-31</span></div>
+        </div>
+        <div class="kt-body">
+          <ul class="goals">
+            <li>品牌知名度提升10%</li>
+            <li>IP形象多元化落地10国</li>
+            <li>5个100W浏览爆品；全球社媒总曝光1亿；总粉丝2130万</li>
+            <li>门店形象设计验收率100%</li>
+          </ul>
+        </div>
+      </div>
+      <div class="kt-right">
+        <div class="kt-qbars"><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:60%;background:#f59e0b"></div></div><div class="kt-qtag" style="color:#f59e0b">Q1 3/5</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q2 0/5</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q3 0/6</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q4 0/6</div></div></div>
+        <div class="kt-stats">
+          <span class="s-done">✅ 已完成 3</span><span class="s-prog">🔄 进行中 6</span><span class="s-wait">⏳ 未开始 13</span><span>📋 共 22 项</span>
+          <button class="toggle-btn" data-kt="KT3" onclick="toggleTasks(this)">查看全部任务 ▸</button>
+        </div>
+      </div>
+      <div class="task-panel" id="panel-KT3"></div>
+    </div>
+    <!-- KT-4 -->
+    <div class="kt-card" id="kt4">
+      <div class="kt-left">
+        <div class="kt-header">
+          <span class="kt-tag kt4">KT-4</span>
+          <h3>变革工作流程，降本提效创收</h3>
+          <div class="kt-meta"><span>👤 潘恩泽</span><span>👥 高强 程艾静 洪瑜 雷淦 蒋爽</span><span>📅 2026-12-31</span></div>
+        </div>
+        <div class="kt-body">
+          <ul class="goals">
+            <li>满意度调研无人化：CSAT有效样本比例20%</li>
+            <li>呼叫中心独立运营：数据真实性100%；在线+热线坐席满意度92%</li>
+            <li>AIGC工具提效：全年释放5名人力</li>
+            <li>VOC声纳体系：投诉48h解决率92%，危机舆情AI预警自动拦截率85%</li>
+            <li>大客户管理：考核国家大客户拜访工具覆盖率100%</li>
+            <li>优质资源盘活：社媒/APP官网落地≥4合作案例、联络中心≥3合作案例</li>
+          </ul>
+        </div>
+      </div>
+      <div class="kt-right">
+        <div class="kt-qbars"><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:50%;background:#f59e0b"></div></div><div class="kt-qtag" style="color:#f59e0b">Q1 5/10</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q2 0/12</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q3 0/8</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q4 0/8</div></div></div>
+        <div class="kt-stats">
+          <span class="s-done">✅ 已完成 5</span><span class="s-prog">🔄 进行中 15</span><span class="s-wait">⏳ 未开始 18</span><span>📋 共 38 项</span>
+          <button class="toggle-btn" data-kt="KT4" onclick="toggleTasks(this)">查看全部任务 ▸</button>
+        </div>
+      </div>
+      <div class="task-panel" id="panel-KT4"></div>
+    </div>
+    <!-- KT-5 -->
+    <div class="kt-card" id="kt5">
+      <div class="kt-left">
+        <div class="kt-header">
+          <span class="kt-tag kt5">KT-5</span>
+          <h3>建设本地组织，AI化高人效</h3>
+          <div class="kt-meta"><span>👤 潘恩泽</span><span>👥 程艾静 洪瑜 雷淦 蒋爽</span><span>📅 2026-12-31</span></div>
+        </div>
+        <div class="kt-body">
+          <ul class="goals">
+            <li>各岗位认证覆盖率100%</li>
+            <li>各岗位日常培训参培率95%，考试通过率90%</li>
+            <li>各岗位基础能力胜任度90%，高阶人才储备15%</li>
+          </ul>
+        </div>
+      </div>
+      <div class="kt-right">
+        <div class="kt-qbars"><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:17%;background:#ef4444"></div></div><div class="kt-qtag" style="color:#ef4444">Q1 1/6</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q2 0/3</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q3 0/2</div></div><div class="kt-qbar"><div class="kt-qfill"><div class="kt-qfill-inner" style="width:0%"></div></div><div class="kt-qtag">Q4 0/1</div></div></div>
+        <div class="kt-stats">
+          <span class="s-done">✅ 已完成 1</span><span class="s-prog">🔄 进行中 6</span><span class="s-wait">⏳ 未开始 5</span><span>📋 共 12 项</span>
+          <button class="toggle-btn" data-kt="KT5" onclick="toggleTasks(this)">查看全部任务 ▸</button>
+        </div>
+      </div>
+      <div class="task-panel" id="panel-KT5"></div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card"><h4>📊 各KT任务完成情况</h4><canvas id="chartKt"></canvas></div>
+    <div class="chart-card"><h4>📅 季度任务进度</h4><canvas id="chartQuarter"></canvas></div>
+  </div>
+
+  <div class="section-title">🧑🏻‍💻 核心成员任务负载</div>
+  <div class="members-grid">
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#f59e0b,#f97316)">洪</div><div class="member-info"><div class="mname">洪瑜</div><div class="mdept">社媒运营</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">33</span><span class="mtlabel">参与任务 · 完成 9%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:30%;background:#f59e0b"></div></div><div class="mp-qtag">Q1 3/10</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/8</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/8</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/7</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">程</div><div class="member-info"><div class="mname">程艾静</div><div class="mdept">联络中心</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">28</span><span class="mtlabel">参与任务 · 完成 14%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:50%;background:#f59e0b"></div></div><div class="mp-qtag">Q1 4/8</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/9</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/6</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/5</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#22c55e,#16a34a)">雷</div><div class="member-info"><div class="mname">雷淦</div><div class="mdept">用户体验</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">27</span><span class="mtlabel">参与任务 · 完成 11%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:33%;background:#f59e0b"></div></div><div class="mp-qtag">Q1 3/9</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/8</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/6</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/4</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">蒋</div><div class="member-info"><div class="mname">蒋爽</div><div class="mdept">移动互联</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">25</span><span class="mtlabel">参与任务 · 完成 16%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:50%;background:#f59e0b"></div></div><div class="mp-qtag">Q1 4/8</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/6</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/6</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/5</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">高</div><div class="member-info"><div class="mname">高强</div><div class="mdept">联络中心</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">27</span><span class="mtlabel">参与任务 · 完成 11%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:43%;background:#f59e0b"></div></div><div class="mp-qtag">Q1 3/7</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/10</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/7</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/3</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#ec4899,#db2777)">徐</div><div class="member-info"><div class="mname">徐超</div><div class="mdept">移动互联</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">8</span><span class="mtlabel">参与任务 · 完成 12%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:100%;background:#22c55e"></div></div><div class="mp-qtag" style="color:#22c55e">Q1 1/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/2</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/3</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/2</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#14b8a6,#0d9488)">刘</div><div class="member-info"><div class="mname">刘彦</div><div class="mdept">视觉设计</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">4</span><span class="mtlabel">参与任务 · 完成 25%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:100%;background:#22c55e"></div></div><div class="mp-qtag" style="color:#22c55e">Q1 1/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/1</div></div></div></div>
+    </div>
+    <div class="member-card">
+      <div class="member-left"><div class="avatar" style="background:linear-gradient(135deg,#f43f5e,#e11d48)">殷</div><div class="member-info"><div class="mname">殷圣禹</div><div class="mdept">视觉设计</div></div></div>
+      <div class="member-right"><div class="mstat"><span class="mtask">4</span><span class="mtlabel">参与任务 · 完成 25%</span></div>
+      <div class="mp-bars"><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:100%;background:#22c55e"></div></div><div class="mp-qtag" style="color:#22c55e">Q1 1/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q2 0/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q3 0/1</div></div><div class="mp-qbar"><div class="mp-qfill"><div class="mp-qfill-inner" style="width:0%"></div></div><div class="mp-qtag">Q4 0/1</div></div></div></div>
+    </div>
+  </div>
+
+  <div class="footer"><a href="https://transsioner.feishu.cn/base/LBM5b1sAsaLk92sFYXscSadEnJS" target="_blank" style="color:var(--p);text-decoration:none;">📋 数据来源：飞书多维表格「用户运营部OGSM进度管理看板」</a> · 自动生成</div>
+</div>
+
+<script>
+// Task data by KT [name, deadline, status, priority, owner]
+const t_KT1 = [["AICC语音交互功能英语国家上线","2026-01-31","已完成","P0","高强"],["上线帮助率调研按钮和满意度调研标签","2026-02-28","进行中","P0","高强"],["外呼机器人上线乌尔都语/马来语/泰语/印尼语释放2人力","2026-03-31","已完成","P0","程艾静"],["Sobot和CRM Call center板块融合上线","2026-03-31","已完成","P0","程艾静"],["AICC法语/阿拉伯语按键语音交互上线","2026-06-30","未开始","P0","高强"],["增加用户历史聊天信息回溯标签","2026-06-30","未开始","P0","高强"],["搭建系统异常监测定位功能","2026-06-30","未开始","P0","高强"],["简化WhatsApp渠道用户评价交互行为","2026-06-30","进行中","P0","高强"],["引入AI质检规范和功能确保回复符合标准","2026-06-30","未开始","P0","高强"],["上线AICC在线坐席翻译功能","2026-06-30","未开始","P0","高强"],["优化AICC用户进线失败遗漏和响应慢问题","2026-06-30","未开始","P0","高强"],["外呼机器人上线西班牙/土耳其/缅甸语释放6人力","2026-06-30","进行中","P0","程艾静"],["上线呼入AI自动录单功能(英语)录入率30%","2026-06-30","进行中","P0","程艾静"],["AICC打通优惠券功能","2026-08-31","未开始","P0","高强"],["推动接口标准化具备接入其他业务场景能力","2026-08-31","未开始","P0","高强"],["优化AICC系统技术架构并发接待量增幅10%","2026-08-31","未开始","P0","高强"],["通过客户反馈优化回复FAQ","2026-09-30","未开始","P0","高强"],["外呼机器人上线法语/阿拉伯语/越南语覆盖40%调研","2026-09-30","未开始","P0","程艾静"],["上线呼入AI自动录单功能(小语种)录入率70%","2026-09-30","未开始","P0","程艾静"],["AICC打通智能故障检测主动预约门店有效帮助率75%","2026-12-31","未开始","P0","高强"],["外呼机器人上线全球小语种释放20人力","2026-12-31","未开始","P0","程艾静"],["优化录单准确性上线AI录单小语种录入率90%","2026-12-31","未开始","P0","程艾静"]];
+const t_KT2 = [["APP首页新增本机设备信息展示功能","2026-03-31","已完成","P0","徐超"],["优化产品满意度调研问卷精简问题","2026-01-31","已完成","P1","蒋爽"],["Carlcare App中高端专区立项输出运营全案","2026-03-31","已完成","P0","蒋爽"],["新增AI自动翻译功能智能识别语言实时翻译","2026-06-30","进行中","P0","徐超"],["任务引导/论坛种草/PUSH触达AI故障检测100万UV","2026-06-30","进行中","P1","蒋爽"],["官网和app新增手机真伪鉴定功能","2026-05-31","进行中","P0","徐超"],["完成专区核心模块搭建上线AI专属服务管家1.0","2026-06-30","进行中","P0","蒋爽"],["重点国家落地智能柜免费存包/保值换新等权益","2026-06-30","进行中","P1","蒋爽"],["整合站内搜索和AI搜索累计使用60万UV","2026-08-31","未开始","P0","徐超"],["依托社媒推广AI故障检测使用人数突破150万","2026-09-30","未开始","P1","蒋爽"],["Carlcare APP接入集团Ella","2026-09-30","未开始","P0","徐超"],["增加故障检测帮助率调研按钮累计60万UV","2026-09-30","未开始","P1","徐超"],["完善重点八国核心权益落地迭代AI服务管家2.0","2026-09-30","未开始","P0","蒋爽"],["丰富专区运营内容推进与其他事业部合作联动","2026-09-30","未开始","P1","蒋爽"],["新增AI智能推荐模块累计使用100万UV","2026-11-30","未开始","P0","徐超"],["强化周年庆AI故障检测曝光累计200万UV","2026-11-30","未开始","P0","蒋爽"],["新增用户设备权益查询功能","2026-11-30","未开始","P0","徐超"],["中高端专区月活跃用户数达100万","2026-12-31","未开始","P0","蒋爽"]];
+const t_KT3 = [["梳理各国服务日现状制定运营策略","2026-03-31","已完成","P2","雷淦"],["IP品牌价值点融入故事线输出角色介绍书","2026-03-31","进行中","P1","洪瑜"],["规划年度礼赠计划丰富IP礼品线增加10种品类","2026-03-31","进行中","P1","洪瑜"],["按国家调查社媒热门宣传形式输出报告","2026-01-31","已完成","P2","洪瑜"],["梳理全球门店形象现状输出优化方案和验收规范","2026-03-31","已完成","P0","刘彦/殷圣禹"],["联合多渠道开展全球器件维修/以旧换新等活动","2026-06-30","进行中","P1","洪瑜"],["完成本地语言Carlcare IP漫画/IP视频上线","2026-06-30","进行中","P0","洪瑜"],["完成IP礼品生产并落地重点7国","2026-06-30","进行中","P1","洪瑜"],["完成短剧上线1个100W浏览爆品","2026-06-30","进行中","P0","洪瑜"],["输出门店形象规范文件VI和SI标准","2026-06-30","进行中","P0","刘彦/殷圣禹"],["上线满意度调研抽奖活动联动优惠券激励评价","2026-09-30","未开始","P0","雷淦"],["IP形象多元化发展落地8国","2026-09-30","未开始","P0","洪瑜"],["联动VOC策划问题与解决系列专题社媒活动","2026-09-30","未开始","P0","洪瑜"],["开展社媒优惠券专项完成8国到店优惠券落地","2026-09-30","未开始","P0","洪瑜"],["全平台社媒新增2个100W浏览爆品","2026-09-30","未开始","P0","洪瑜"],["全球落地实施门店形象新规范及验收","2026-09-30","未开始","P0","刘彦/殷圣禹"],["运营中高端专区板块上线中高端专区活动参与10w","2026-12-31","未开始","P1","蒋爽"],["结合IP完成周年庆活动","2026-11-30","未开始","P1","洪瑜"],["优化IP礼品场景应用迭代IP产品库输出复盘报告","2026-12-31","未开始","P1","洪瑜"],["社媒平台新增2个100W浏览爆品","2026-12-31","未开始","P0","洪瑜"],["达成TK千万级粉丝1个百万级2个","2026-12-31","未开始","P0","洪瑜"],["门店新形象落地总结复盘输出复盘报告","2026-12-31","未开始","P0","刘彦/殷圣禹"]];
+const t_KT4 = [["多渠道分层满意度调研方式方案落地","2026-03-31","进行中","P0","雷淦/高强"],["优化大客户调研WA渠道有效样本比例不低于6%","2026-03-31","进行中","P0","雷淦"],["搭建亚太/非洲/新市场呼叫中心区域管理团队","2026-01-31","已完成","P0","程艾静"],["对各区域呼叫中心人员和业务盘点输出报告","2026-03-31","进行中","P0","程艾静"],["AIGC工具提效搭建公共工具库采购26年账号","2026-03-31","进行中","P0","洪瑜"],["VOC声纳体系制定投诉及危机舆情录入标准","2026-03-31","进行中","P0","雷淦"],["大客户移动端拜访工具重点国家上线及培训","2026-03-31","已完成","P0","雷淦"],["制定oraimo项目合作方案完成试点竖立标杆","2026-03-31","已完成","P0","洪瑜"],["联络中心整合资源形成服务资源包","2026-03-31","已完成","P0","高强"],["APP/官网输出Carlcare优质资源合作清单文档","2026-03-31","已完成","P0","蒋爽"],["新增调研市场推进上线","2026-05-01","进行中","P0","雷淦"],["WA满意度调研有效样本比例不低于10%","2026-06-30","进行中","P0","雷淦"],["搭建呼叫中心管理岗岗位手册输出工作清单","2026-06-30","进行中","P0","程艾静"],["梳理全球呼叫中心业务现状输出白皮书","2026-06-30","进行中","P0","程艾静"],["上线呼叫中心指标看板","2026-06-30","进行中","P0","程艾静"],["更新AIGC培训课程体系优化课程模块","2026-06-30","进行中","P0","洪瑜"],["落地VOC跨部门信息分享机制","2026-06-30","进行中","P0","雷淦"],["基于售后高频反馈形成用户原声鉴赏案例库","2026-06-30","进行中","P0","雷淦"],["输出大客户拜访工具迭代培训2.0重点6国应用","2026-06-30","进行中","P1","雷淦"],["完成oraimo项目合作复盘输出标杆案例文档","2026-06-30","进行中","P1","洪瑜"],["联络中心与其他业务场景建立3合作意向落地1个","2026-06-30","进行中","P1","程艾静/高强"],["APP/官网推进事业部合作洽谈落地至少1个合作","2026-06-30","进行中","P1","蒋爽"],["持续推进多渠道调研CSAT去人化数据来源60%","2026-09-30","未开始","P0","雷淦"],["补齐全球呼叫中心站点管理HC统一指标标准","2026-09-30","未开始","P1","程艾静"],["启动第二届AIGC创意大赛","2026-09-30","未开始","P0","洪瑜"],["沉淀用户声音高频反馈形成可复用知识输出","2026-09-30","未开始","P1","雷淦"],["大客户拜访移动端应用使用率覆盖超50%","2026-09-30","未开始","P1","雷淦"],["社媒推进与各事业部合作落地至少1个合作","2026-09-30","未开始","P1","洪瑜"],["联络中心中台服务资源包与其他业务场景合作落地","2026-09-30","未开始","P1","程艾静/高强"],["APP/官网以标杆案例为核心再拓展合作品牌","2026-09-30","未开始","P1","蒋爽"],["复盘全年调研数据迭代下一年调研方式","2026-12-31","未开始","P0","雷淦"],["实现呼叫中心独立运营后数据真实性100%","2026-12-31","未开始","P0","程艾静"],["AIGC工具提效总结使用情况优化迭代工具库","2026-12-31","未开始","P1","洪瑜"],["完成舆情看板冗余过滤机制AI预警拦截率85%","2026-12-31","未开始","P0","雷淦"],["大客户拜访工具移动端使用区域覆盖率超100%","2026-12-31","未开始","P1","雷淦"],["复盘合作项目输出carlcare社媒账号价值文档","2026-12-31","未开始","P1","洪瑜"],["联络中心通过产品功能优化促成至少1个合作","2026-12-31","未开始","P1","程艾静/高强"],["APP/官网输出年度合作总结文档","2026-12-31","未开始","P1","蒋爽"]];
+const t_KT5 = [["迭代四岗位认证标准新建社媒DM认证标准","2026-03-31","已完成","P1","全员"],["完成五个岗位2026年首次认证盘点","2026-03-31","未开始","P1","全员"],["四大岗位线更新2026年新人学习地图课程","2026-03-31","进行中","P1","程艾静/雷淦"],["社媒DM新建岗位新人学习地图","2026-03-31","进行中","P1","洪瑜/蒋爽"],["梳理岗位工作内容制定日/周/月工作指引和KPI","2026-03-31","进行中","P1","洪瑜/蒋爽"],["五大岗位完善月度培训落地和验收机制每月输出月考","2026-03-31","进行中","P1","全员"],["五大岗位新员工学习地图上线新人考试通过率100%","2026-06-30","进行中","P2","全员"],["各岗位负责人更新岗位日常培训课程","2026-06-30","进行中","P2","全员"],["迭代用户体验主管及呼叫中心主管月度考核规范","2026-06-30","进行中","P2","程艾静/雷淦"],["各岗位负责人完成五大岗位年终认证方案","2026-09-30","未开始","P2","全员"],["各岗位日常培训参培率95%考试通过率90%","2026-09-30","未开始","P2","全员"],["完成五大岗位年终认证输出年终认证报告","2026-12-31","未开始","P2","全员"]];
+
+const TASK_DATA = { KT1: t_KT1, KT2: t_KT2, KT3: t_KT3, KT4: t_KT4, KT5: t_KT5 };
+
+function renderTaskPanel(tasks, panelId, statusClass) {
+  var panel = document.getElementById(panelId);
+  if (panel.innerHTML) return;
+  var statusCls = {'已完成':'done','进行中':'prog','未开始':'wait'};
+  function getQ(dl) { var m = parseInt(dl.split('-')[1]); return m<=3?'Q1':m<=6?'Q2':m<=9?'Q3':'Q4'; }
+  var h = '<table class="task-table"><thead><tr><th>#</th><th>任务</th><th>季度</th><th>优先级</th><th>状态</th><th>截止日期</th><th>负责人</th></tr></thead><tbody>';
+  for (var i = 0; i < tasks.length; i++) {
+    var t = tasks[i];
+    var cls = statusCls[t[2]] || 'wait';
+    var q = getQ(t[1]);
+    h += '<tr><td style="color:var(--t3);width:28px">' + (i+1) + '</td><td>' + t[0] + '</td><td><span class="q-badge ' + q + '">' + q + '</span></td><td><span class="pri p' + t[3].substring(1) + '">' + t[3] + '</span></td><td><span class="task-status ' + cls + '">' + t[2] + '</span></td><td style="white-space:nowrap">' + t[1] + '</td><td style="color:var(--t2)">' + t[4] + '</td></tr>';
+  }
+  h += '</tbody></table>';
+  panel.innerHTML = h;
+}
+
+function toggleTasks(btn) {
+  var kt = btn.getAttribute('data-kt');
+  var panel = document.getElementById('panel-' + kt);
+  var isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    panel.classList.remove('open');
+    btn.classList.remove('active');
+    btn.textContent = '查看全部任务 ▸';
+  } else {
+    if (!panel.innerHTML) {
+      renderTaskPanel(TASK_DATA[kt], 'panel-' + kt);
+    }
+    panel.classList.add('open');
+    btn.classList.add('active');
+    btn.textContent = '收起任务 ▲';
+  }
+}
+
+// Theme
+function toggleTheme() {
+  var html = document.documentElement, btn = document.getElementById('themeBtn');
+  if (html.getAttribute('data-theme') === 'dark') {
+    html.setAttribute('data-theme', 'light'); btn.textContent = '🌙 深色模式';
+    localStorage.setItem('ogsm-theme', 'light');
+  } else {
+    html.setAttribute('data-theme', 'dark'); btn.textContent = '☀ 浅色模式';
+    localStorage.setItem('ogsm-theme', 'dark');
+  }
+}
+(function() {
+  var s = localStorage.getItem('ogsm-theme');
+  if (s === 'light') { document.documentElement.setAttribute('data-theme','light'); document.getElementById('themeBtn').textContent = '🌙 深色模式'; }
+})();
+
+document.getElementById('ts').textContent = new Date().toLocaleString('zh-CN');
+
+var cDone = '#10b981', cProg = '#f59e0b', cWait = '#64748b';
+var cKT = ['#818cf8','#60a5fa','#38bdf8','#fbbf24','#4ade80'];
+var cPerson = ['#fbbf24','#eab308','#d4a30a','#c08e08','#ac7a06'];
+
+var gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#2a2d3e';
+
+// Button legend plugin - redraw legend items as pill buttons with perfect circles
+var legendBtnPlugin = {
+  id: 'legendBtn',
+  afterDraw: function(chart) {
+    var legend = chart.legend;
+    if (!legend || !legend.legendItems || !legend.legendItems.length) return;
+    var ctx = chart.ctx;
+    var items = legend.legendItems;
+    var bg2 = getComputedStyle(document.documentElement).getPropertyValue('--bg2').trim();
+    var border = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+    var t = getComputedStyle(document.documentElement).getPropertyValue('--t').trim();
+    ctx.save();
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (!item) continue;
+      var nx = item.x, ny = item.y;
+      // Draw pill button background
+      var tw = ctx.measureText(item.text).width;
+      ctx.fillStyle = item.hidden ? 'transparent' : bg2;
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(nx - 18, ny - 9, tw + 48, 24, 14);
+      ctx.fill();
+      ctx.stroke();
+      // Draw square color swatch
+      var sx = nx - 8, sy = ny - 3, sz = 12;
+      ctx.fillStyle = item.fillStyle;
+      ctx.fillRect(sx, sy, sz, sz);
+      ctx.strokeStyle = item.strokeStyle;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx, sy, sz, sz);
+      // Redraw text on top
+      ctx.fillStyle = item.hidden ? '#666' : t;
+      ctx.font = '11px Inter, Noto Sans SC';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.text, nx + 12, ny + 3);
+    }
+    ctx.restore();
+  }
+};
+
+// Percent label plugin for stacked bar charts
+var pctPlugin = {
+  id: 'pctLabels',
+  afterDatasetsDraw: function(chart) {
+    var ctx = chart.ctx, ds = chart.data.datasets, meta, bar, total, val, pct;
+    var textColor = getComputedStyle(document.documentElement).getPropertyValue('--t').trim();
+    for (var di = 0; di < ds.length; di++) {
+      meta = chart.getDatasetMeta(di);
+      if (!meta || meta.hidden) continue;
+      for (var i = 0; i < meta.data.length; i++) {
+        bar = meta.data[i];
+        total = 0;
+        for (var j = 0; j < ds.length; j++) total += (ds[j].data[i] || 0);
+        val = ds[di].data[i];
+        if (!total || !val || val/total < 0.06) continue; // skip tiny segments
+        pct = Math.round(val / total * 100);
+        ctx.save();
+        ctx.fillStyle = (val/total > 0.2) ? '#fff' : textColor;
+        ctx.font = 'bold 11px Inter, Noto Sans SC';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pct + '%', bar.x, bar.y + bar.height / 2);
+        ctx.restore();
+      }
+    }
+  }
+};
+new Chart(document.getElementById('chartKt'), {
+  type: 'bar',
+  data: { labels: ['KT-1\n联络中心','KT-2\nAPP与Web','KT-3\n品牌故事','KT-4\n变革流程','KT-5\n本地组织'],
+    datasets: [
+      { label:'已完成', data:[3,3,3,5,1], backgroundColor:cDone, borderWidth:0 },
+      { label:'进行中', data:[6,5,6,15,6], backgroundColor:cProg, borderWidth:0 },
+      { label:'未开始', data:[13,10,13,18,5], backgroundColor:cWait, borderWidth:0 }
+    ]},
+  plugins: [pctPlugin, legendBtnPlugin],
+  options: { responsive:true, maintainAspectRatio:true, animation:{ duration:800 },
+    plugins: { 
+      legend:{ position:'bottom', labels:{ color:getComputedStyle(document.documentElement).getPropertyValue('--t2').trim(), font:{size:11}, boxWidth:12, boxHeight:12, padding:22 } },
+      tooltip:{ callbacks:{ 
+        label:function(ctx){ return ctx.dataset.label+': '+ctx.raw+' 项'; },
+        footer:function(items){ var total=items.reduce(function(s,i){return s+i.raw},0); return '合计: '+total+' 项'; }
+      }}
+    },
+    scales: { x:{ stacked:true, ticks:{ color:getComputedStyle(document.documentElement).getPropertyValue('--t3').trim(), font:{size:10} }, grid:{ color:gridColor } },
+              y:{ stacked:true, ticks:{ color:getComputedStyle(document.documentElement).getPropertyValue('--t3').trim(), font:{size:10} }, grid:{ color:gridColor } } }
+  }
+});
+new Chart(document.getElementById('chartQuarter'), {
+  type: 'bar',
+  data: { labels: ['Q1','Q2','Q3','Q4'],
+    datasets: [
+      { label:'已完成', data:[14,0,0,0], backgroundColor:cDone, borderWidth:0 },
+      { label:'进行中', data:[13,30,0,0], backgroundColor:cProg, borderWidth:0 },
+      { label:'未开始', data:[0,3,26,26], backgroundColor:cWait, borderWidth:0 }
+    ]},
+  plugins: [pctPlugin, legendBtnPlugin],
+  options: { responsive:true, maintainAspectRatio:true, animation:{ duration:800 },
+    plugins: { 
+      legend:{ position:'bottom', labels:{ color:getComputedStyle(document.documentElement).getPropertyValue('--t2').trim(), font:{size:11}, boxWidth:12, boxHeight:12, padding:22 } },
+      tooltip:{ callbacks:{ 
+        label:function(ctx){ return ctx.dataset.label+': '+ctx.raw+' 项'; },
+        footer:function(items){ var total=items.reduce(function(s,i){return s+i.raw},0); return '合计: '+total+' 项'; },
+        afterFooter:function(ctx){ var totals={Q1:27,Q2:33,Q3:26,Q4:26},q=ctx[0].label; return '总任务: '+totals[q]+' 项'; }
+      }}
+    },
+    scales: { x:{ stacked:true, ticks:{ color:getComputedStyle(document.documentElement).getPropertyValue('--t3').trim(), font:{size:11} }, grid:{ color:gridColor } },
+              y:{ stacked:true, ticks:{ color:getComputedStyle(document.documentElement).getPropertyValue('--t3').trim(), font:{size:10} }, grid:{ color:gridColor }, title:{ display:true, text:'任务数', color:getComputedStyle(document.documentElement).getPropertyValue('--t3').trim(), font:{size:10} } } }
+  }
+});
+</script>
+</body>
+</html>
